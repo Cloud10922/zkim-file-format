@@ -681,6 +681,7 @@ npm run build
 - ❓ [Ask a Question](https://github.com/zkdotim/zkim-file-format/issues/new?template=question.md)
 - 💬 [Discussions](https://github.com/zkdotim/zkim-file-format/discussions)
 - 🔒 [Security Policy](./.github/SECURITY.md)
+- 📜 [Code of Conduct](./CODE_OF_CONDUCT.md)
 
 ## 📄 Changelog
 

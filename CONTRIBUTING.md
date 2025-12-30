@@ -255,6 +255,10 @@ packages/zkim-file-format/
 └── docs/                 # Documentation (if needed)
 ```
 
+## 📜 Code of Conduct
+
+This project adheres to a [Code of Conduct](./CODE_OF_CONDUCT.md) to ensure a welcoming and inclusive environment for all contributors. By participating, you agree to uphold this code.
+
 ## ❓ Questions?
 
 - Open an issue for bug reports or feature requests
