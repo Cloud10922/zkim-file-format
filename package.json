@@ -1,0 +1,78 @@
+{
+  "name": "@zkim-platform/file-format",
+  "version": "1.0.2",
+  "description": "Secure, encrypted file format with three-layer encryption, integrity validation, and privacy-preserving search capabilities",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src tests",
+    "lint:fix": "eslint src tests --fix",
+    "typecheck": "tsc --noEmit",
+    "example": "tsx examples/basic-usage.ts",
+    "prepublishOnly": "npm run build && npm run test && npm run typecheck"
+  },
+  "keywords": [
+    "encryption",
+    "file-format",
+    "zero-knowledge",
+    "privacy",
+    "searchable-encryption",
+    "cryptography",
+    "libsodium",
+    "zkim"
+  ],
+  "author": "ZKIM Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zkdotim/zkim-file-format.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zkdotim/zkim-file-format/issues"
+  },
+  "homepage": "https://github.com/zkdotim/zkim-file-format#readme",
+  "dependencies": {
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
+    "libsodium-wrappers-sumo": "^0.7.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/jest": "^30.0.0",
+    "@types/libsodium-wrappers-sumo": "^0.7.8",
+    "@types/node": "^25.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
+    "eslint": "^9.39.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

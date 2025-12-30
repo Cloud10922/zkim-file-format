@@ -1,0 +1,28 @@
+# Source files (only dist is published)
+src/
+tests/
+examples/
+
+# Configuration files
+tsconfig.json
+tsup.config.ts
+jest.config.cjs
+.eslintrc.cjs
+.prettierrc.json
+
+# Development files
+.gitignore
+.npmignore
+*.md
+!README.md
+
+# Build artifacts
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# IDE
+.vscode/
+.idea/
+

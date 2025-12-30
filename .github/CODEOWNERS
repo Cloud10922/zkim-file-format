@@ -1,0 +1,44 @@
+# Code Owners for @zkim-platform/file-format
+# This file defines who owns different parts of the codebase
+# All PRs require approval from code owners
+
+# Global owners - all files require approval from maintainers
+* @zkdotim/maintainers
+
+# Source code
+/src/ @zkdotim/maintainers
+
+# Core services
+/src/core/ @zkdotim/maintainers
+
+# Types and interfaces
+/src/types/ @zkdotim/maintainers
+
+# Utilities
+/src/utils/ @zkdotim/maintainers
+
+# Constants
+/src/constants/ @zkdotim/maintainers
+
+# Documentation
+*.md @zkdotim/maintainers
+README.md @zkdotim/maintainers
+CHANGELOG.md @zkdotim/maintainers
+CONTRIBUTING.md @zkdotim/maintainers
+
+# Configuration files
+package.json @zkdotim/maintainers
+tsconfig.json @zkdotim/maintainers
+tsup.config.ts @zkdotim/maintainers
+eslint.config.js @zkdotim/maintainers
+jest.config.cjs @zkdotim/maintainers
+
+# GitHub workflows
+/.github/ @zkdotim/maintainers
+
+# Examples
+/examples/ @zkdotim/maintainers
+
+# Tests
+/tests/ @zkdotim/maintainers
+
