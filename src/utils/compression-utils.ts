@@ -50,7 +50,7 @@ async function tryNodeZlibCompress(
   const result = await ErrorUtils.withErrorHandling(async () => {
     // Dynamic import of zlib - only works in Node.js runtime
     // This will fail in browser environments and is caught below
-    // eslint-disable-next-line import/no-nodejs-modules -- Dynamic import with fallback for Node.js runtime only
+    // Dynamic import with fallback for Node.js runtime only
     const zlib = await import("zlib");
     if (zlib && typeof zlib.gzipSync === "function") {
       // Buffer is available in Node.js runtime when zlib is available
@@ -97,7 +97,7 @@ async function tryNodeZlibDecompress(
   const result = await ErrorUtils.withErrorHandling(async () => {
     // Dynamic import of zlib - only works in Node.js runtime
     // This will fail in browser environments and is caught below
-    // eslint-disable-next-line import/no-nodejs-modules -- Dynamic import with fallback for Node.js runtime only
+    // Dynamic import with fallback for Node.js runtime only
     const zlib = await import("zlib");
     if (zlib && typeof zlib.gunzipSync === "function") {
       // Buffer is available in Node.js runtime when zlib is available
