@@ -122,9 +122,10 @@ describe("ZKIMFileService - Errors", () => {
     });
 
     it("should throw error when file size exceeds maximum", async () => {
-      // Use a smaller size that still exceeds max but doesn't exceed JS array limits
-      // Max safe integer for array length is ~2^32-1, but we use 10GB + 1MB to test limit
-      const largeContent = new Uint8Array(2 * 1024 * 1024 * 1024 + 1024 * 1024); // 10GB + 1MB, exceeds default 10GB max
+      // Use a size that exceeds max but doesn't exceed JS array limits
+      // JavaScript max array size is ~2GB (2^31-1 bytes), so we use 2GB + 1MB
+      // Note: This tests the validation logic; actual max is 10GB but can't be tested with real arrays
+      const largeContent = new Uint8Array(2 * 1024 * 1024 * 1024 + 1024 * 1024); // 2GB + 1MB
       largeContent.fill(42);
 
       await expect(
