@@ -29,7 +29,8 @@
     "lint:fix": "eslint src tests --fix",
     "typecheck": "tsc --noEmit",
     "example": "tsx examples/basic-usage.ts",
-    "prepublishOnly": "npm run build && npm run test && npm run typecheck"
+    "prepublishOnly": "npm run build && npm run test && npm run typecheck",
+    "prepare": "husky"
   },
   "keywords": [
     "encryption",
@@ -65,6 +66,7 @@
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
     "eslint": "^9.39.2",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.6",
     "tsup": "^8.5.1",

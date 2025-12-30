@@ -1,0 +1,2 @@
+# Run validation script
+node scripts/validate-standalone.js
