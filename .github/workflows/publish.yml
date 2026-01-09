@@ -31,12 +31,15 @@ jobs:
         run: npm run build
       
       - name: Publish to npm with Provenance
-        run: npm publish --provenance
-        # Note: Uses OIDC authentication (id-token: write permission)
-        # --provenance flag enables build attestation (SLSA Level 2)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Note: Uses NPM_TOKEN for authentication with --provenance for build attestation
+        # The --provenance flag enables SLSA Level 2 attestation
         # This creates a Provenance section on npm package page showing:
         # - Build environment (GitHub Actions)
         # - Source commit
         # - Build workflow file
         # - Public ledger entry (transparency log)
-        # If using granular token instead, set NPM_TOKEN secret in repository settings
+        # Setup: Create granular access token at https://www.npmjs.com/settings/~/tokens
+        # Then add as NPM_TOKEN secret in repository settings
