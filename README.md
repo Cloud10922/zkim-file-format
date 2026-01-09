@@ -1,14 +1,26 @@
-# @zkim-platform/file-format
+<p align="center">
+  <img src="./zkim-logo.png" alt="ZKIM" width="120" height="120" />
+</p>
 
-![npm version](https://img.shields.io/npm/v/@zkim-platform/file-format)
-![npm downloads](https://img.shields.io/npm/dm/@zkim-platform/file-format)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)
-![Test Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)
-![Build Status](https://github.com/zkdotim/zkim-file-format/actions/workflows/ci.yml/badge.svg?branch=main)
+<h1 align="center">@zkim-platform/file-format</h1>
 
-Post-quantum secure file format using ML-KEM-768 (FIPS 203) for key exchange and ML-DSA-65 (FIPS 204) for signatures, with XChaCha20-Poly1305 symmetric encryption protected by post-quantum key derivation. Three-layer encryption with privacy-preserving search capabilities. Platform and user layer keys are derived from ML-KEM-768 shared secrets using BLAKE3. Content layer keys are cryptographically random for per-file perfect forward secrecy.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@zkim-platform/file-format"><img src="https://img.shields.io/npm/v/@zkim-platform/file-format" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@zkim-platform/file-format"><img src="https://img.shields.io/npm/dm/@zkim-platform/file-format" alt="npm downloads" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-green" alt="Node.js" /></a>
+  <img src="https://img.shields.io/badge/coverage-92%25-brightgreen" alt="Test Coverage" />
+  <a href="https://github.com/zkdotim/zkim-file-format/actions/workflows/ci.yml"><img src="https://github.com/zkdotim/zkim-file-format/actions/workflows/ci.yml/badge.svg?branch=main" alt="Build Status" /></a>
+</p>
+
+<p align="center">
+  Post-quantum secure file format with three-layer encryption, ML-KEM-768/ML-DSA-65 cryptography, and privacy-preserving search.
+</p>
+
+---
+
+Protect your files against future quantum computer attacks. Built on NIST-standardized cryptography (FIPS 203/204) with an auditable, open-source design and verifiable builds.
 
 ## Installation
 
