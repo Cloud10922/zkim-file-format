@@ -26,6 +26,9 @@ module.exports = {
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@noble/hashes/blake3\\.js$": "<rootDir>/node_modules/@noble/hashes/blake3.js",
+    "^@noble/post-quantum/ml-dsa\\.js$": "<rootDir>/node_modules/@noble/post-quantum/ml-dsa.js",
+    "^@noble/post-quantum/ml-kem\\.js$": "<rootDir>/node_modules/@noble/post-quantum/ml-kem.js",
   },
   transformIgnorePatterns: [
     "node_modules/(?!(@noble|libsodium-wrappers-sumo)/)",

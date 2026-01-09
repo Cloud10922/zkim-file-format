@@ -1453,8 +1453,8 @@ export class ZKIMFileService extends ServiceBase {
 
     try {
       // ML-DSA-65 signature (FIPS 204)
-      // Correct parameter order: sign(message, secretKey)
-      const signature = ml_dsa65.sign(message, key);
+      // Correct parameter order: sign(secretKey, message)
+      const signature = ml_dsa65.sign(key, message);
       this.logger.info("ZKIM ML-DSA-65 signData succeeded", {
         signatureLength: signature.length,
         expectedLength: ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SIGNATURE,

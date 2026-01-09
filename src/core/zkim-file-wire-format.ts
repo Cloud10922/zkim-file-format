@@ -282,8 +282,8 @@ export async function generateFileSignature(
     const seed = blake3(combinedSeed, { dkLen: 32 });
 
     const keypair = ml_dsa65.keygen(seed);
-    // Correct parameter order: sign(message, secretKey)
-    const signature = ml_dsa65.sign(hashedInput, keypair.secretKey);
+    // Correct parameter order: sign(secretKey, message)
+    const signature = ml_dsa65.sign(keypair.secretKey, hashedInput);
 
     return signature;
   }, context);
