@@ -171,7 +171,7 @@ const storage = new LocalStorageBackend("my-prefix:");
 
 ### Custom Storage
 
-For production use, implement a custom storage backend. See **[Storage Integration](Storage-Integration)** for complete guide with examples for:
+For production use, implement a custom storage backend. See **[Storage Integration](Storage-Integration.md)** for complete guide with examples for:
 - AWS S3
 - Azure Blob Storage
 - Google Cloud Storage
@@ -262,7 +262,7 @@ await SecureStorage.setItem("platformKey", encryptedPlatformKey);
 
 ### Authentication Integration
 
-For complete authentication integration guide, see **[Authentication Integration](Authentication-Integration)** which covers:
+For complete authentication integration guide, see **[Authentication Integration](Authentication-Integration.md)** which covers:
 - Wallet-based authentication (Ethereum, Web3)
 - OAuth providers (Google, Auth0, etc.)
 - Email/password authentication
@@ -348,11 +348,11 @@ try {
 
 ## Next Steps
 
-1. **Read [Authentication Integration](Authentication-Integration)** ⭐ **CRITICAL** - How to integrate with your auth system
-2. **Read [Storage Integration](Storage-Integration)** - Essential for production use
-3. **Check [Examples](Examples)** - Real-world usage patterns
-4. **Review [API Reference](API-Reference)** - Complete method documentation
-5. **See [Security](Security)** - Cryptographic details and best practices
+1. **Read [Authentication Integration](Authentication-Integration.md)** ⭐ **CRITICAL** - How to integrate with your auth system
+2. **Read [Storage Integration](Storage-Integration.md)** - Essential for production use
+3. **Check [Examples](Examples.md)** - Real-world usage patterns
+4. **Review [API Reference](API-Reference.md)** - Complete method documentation
+5. **See [Security](Security.md)** - Cryptographic details and best practices
 
 ---
 

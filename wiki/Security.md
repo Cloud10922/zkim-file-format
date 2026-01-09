@@ -526,9 +526,9 @@ This package may help with:
 
 ## See Also
 
-- **[Architecture](Architecture)** - File format specification
-- **[API Reference](API-Reference)** - Complete API documentation
-- **[Getting Started](Getting-Started)** - Installation and setup
+- **[Architecture](Architecture.md)** - File format specification
+- **[API Reference](API-Reference.md)** - Complete API documentation
+- **[Getting Started](Getting-Started.md)** - Installation and setup
 
 ---
 

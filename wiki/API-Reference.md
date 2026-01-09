@@ -84,7 +84,7 @@ const result = await fileService.createZkimFile(
 
 Downloads and decrypts a ZKIM file. **Requires explicit `platformKey` and `userKey` parameters for security.**
 
-⚠️ **SECURITY:** Keys must be derived from actual user authentication, not generated deterministically. See [Authentication Integration](Authentication-Integration) for proper key derivation.
+⚠️ **SECURITY:** Keys must be derived from actual user authentication, not generated deterministically. See [Authentication Integration](Authentication-Integration.md) for proper key derivation.
 
 ```typescript
 downloadFile(

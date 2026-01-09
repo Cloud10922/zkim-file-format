@@ -346,7 +346,7 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 - **[GitHub Issues](https://github.com/zkdotim/zkim-file-format/issues)** - Bug reports and feature requests
 - **[GitHub Discussions](https://github.com/zkdotim/zkim-file-format/discussions)** - Questions and discussions
-- **[Wiki](Home)** - Documentation
+- **[Wiki](Home.md)** - Documentation
 
 ### Questions
 

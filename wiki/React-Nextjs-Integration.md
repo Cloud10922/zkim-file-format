@@ -416,10 +416,10 @@ See the following files for complete examples:
 
 ## See Also
 
-- **[Getting Started](Getting-Started)** - Basic setup
-- **[Authentication Integration](Authentication-Integration)** - Key derivation
-- **[Storage Integration](Storage-Integration)** - Storage backends
-- **[API Reference](API-Reference)** - Complete API docs
+- **[Getting Started](Getting-Started.md)** - Basic setup
+- **[Authentication Integration](Authentication-Integration.md)** - Key derivation
+- **[Storage Integration](Storage-Integration.md)** - Storage backends
+- **[API Reference](API-Reference.md)** - Complete API docs
 
 ---
 

@@ -724,11 +724,11 @@ async function rotateUserKey(
 
 ## See Also
 
-- **[Getting Started](Getting-Started)** - Basic setup and installation
-- **[Storage Integration](Storage-Integration)** - Storage backend integration
-- **[API Reference](API-Reference)** - Complete API documentation
-- **[Security](Security)** - Cryptographic details and best practices
-- **[Examples](Examples)** - Code examples and patterns
+- **[Getting Started](Getting-Started.md)** - Basic setup and installation
+- **[Storage Integration](Storage-Integration.md)** - Storage backend integration
+- **[API Reference](API-Reference.md)** - Complete API documentation
+- **[Security](Security.md)** - Cryptographic details and best practices
+- **[Examples](Examples.md)** - Code examples and patterns
 
 ---
 

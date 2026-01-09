@@ -370,10 +370,10 @@ const serviceWithCompression = new ZKIMFileService({
 
 ## See Also
 
-- **[Getting Started](Getting-Started)** - Basic setup and installation
-- **[API Reference](API-Reference)** - Complete API documentation
-- **[Security](Security)** - Security best practices
-- **[Examples](Examples)** - Code examples and patterns
+- **[Getting Started](Getting-Started.md)** - Basic setup and installation
+- **[API Reference](API-Reference.md)** - Complete API documentation
+- **[Security](Security.md)** - Security best practices
+- **[Examples](Examples.md)** - Code examples and patterns
 
 ---
 

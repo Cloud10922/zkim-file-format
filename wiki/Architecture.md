@@ -404,15 +404,15 @@ The file format works with any storage:
 - Local filesystem
 - Custom backends
 
-See **[Storage Integration](Storage-Integration)** for details.
+See **[Storage Integration](Storage-Integration.md)** for details.
 
 ---
 
 ## See Also
 
-- **[Security](Security)** - Security documentation
-- **[Storage Integration](Storage-Integration)** - Storage backend guide
-- **[API Reference](API-Reference)** - Complete API documentation
+- **[Security](Security.md)** - Security documentation
+- **[Storage Integration](Storage-Integration.md)** - Storage backend guide
+- **[API Reference](API-Reference.md)** - Complete API documentation
 
 ---
 

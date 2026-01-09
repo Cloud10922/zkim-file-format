@@ -435,9 +435,9 @@ console.log("Validation:", {
 
 ### Resources
 
-- **[API Reference](API-Reference)** - Complete API documentation
-- **[Examples](Examples)** - Code examples
-- **[Storage Integration](Storage-Integration)** - Storage backend guide
+- **[API Reference](API-Reference.md)** - Complete API documentation
+- **[Examples](Examples.md)** - Code examples
+- **[Storage Integration](Storage-Integration.md)** - Storage backend guide
 - **[GitHub Issues](https://github.com/zkdotim/zkim-file-format/issues)** - Report bugs
 
 ### Reporting Issues
@@ -480,7 +480,7 @@ const userKey2 = await deriveKeyFromWallet(walletAddress, signature); // ✅ Sam
 const decrypted = await fileService.decryptZkimFile(file, userId, userKey2); // ✅ Works!
 ```
 
-**See:** [Authentication Integration](Authentication-Integration) for proper key derivation.
+**See:** [Authentication Integration](Authentication-Integration.md) for proper key derivation.
 
 ---
 

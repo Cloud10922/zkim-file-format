@@ -5,44 +5,44 @@ Welcome to the comprehensive documentation for `@zkim-platform/file-format` - a 
 ## 📚 Documentation Index
 
 ### Getting Started
-- **[Getting Started](Getting-Started)** - Installation, requirements, and your first ZKIM file
+- **[Getting Started](Getting-Started.md)** - Installation, requirements, and your first ZKIM file
 
 ### Core Documentation
-- **[Authentication Integration](Authentication-Integration)** ⭐ **CRITICAL** - How to integrate with any authentication system (wallet, OAuth, email/password, etc.)
-- **[Storage Integration](Storage-Integration)** ⭐ **CRITICAL** - How to integrate with any storage backend (S3, Azure, GCS, IPFS, etc.)
-- **[Recommended Configurations](Recommended-Configurations)** - Pre-configured settings for common use cases
-- **[React & Next.js Integration](React-Nextjs-Integration)** - Complete integration guide for React and Next.js
-- **[API Reference](API-Reference)** - Complete API documentation for all services and methods
-- **[Architecture](Architecture)** - File format specification, wire format, and internal design
+- **[Authentication Integration](Authentication-Integration.md)** ⭐ **CRITICAL** - How to integrate with any authentication system (wallet, OAuth, email/password, etc.)
+- **[Storage Integration](Storage-Integration.md)** ⭐ **CRITICAL** - How to integrate with any storage backend (S3, Azure, GCS, IPFS, etc.)
+- **[Recommended Configurations](Recommended-Configurations.md)** - Pre-configured settings for common use cases
+- **[React & Next.js Integration](React-Nextjs-Integration.md)** - Complete integration guide for React and Next.js
+- **[API Reference](API-Reference.md)** - Complete API documentation for all services and methods
+- **[Architecture](Architecture.md)** - File format specification, wire format, and internal design
 
 ### Advanced Topics
-- **[Security](Security)** - Post-quantum cryptography, ML-DSA-65, ML-KEM-768, threat model
-- **[Examples](Examples)** - Code examples, use cases, and integration patterns
+- **[Security](Security.md)** - Post-quantum cryptography, ML-DSA-65, ML-KEM-768, threat model
+- **[Examples](Examples.md)** - Code examples, use cases, and integration patterns
 
 ### Support
-- **[Troubleshooting](Troubleshooting)** - Common issues, error codes, and solutions
-- **[Contributing](Contributing)** - Development setup, code style, and PR process
+- **[Troubleshooting](Troubleshooting.md)** - Common issues, error codes, and solutions
+- **[Contributing](Contributing.md)** - Development setup, code style, and PR process
 
 ---
 
 ## 🚀 Quick Navigation
 
 ### For New Users
-1. Start with **[Getting Started](Getting-Started)** to install and create your first file
-2. Read **[Authentication Integration](Authentication-Integration)** to connect your authentication system
-3. Read **[Storage Integration](Storage-Integration)** to connect your storage backend
-4. Check **[Examples](Examples)** for real-world usage patterns
+1. Start with **[Getting Started](Getting-Started.md)** to install and create your first file
+2. Read **[Authentication Integration](Authentication-Integration.md)** to connect your authentication system
+3. Read **[Storage Integration](Storage-Integration.md)** to connect your storage backend
+4. Check **[Examples](Examples.md)** for real-world usage patterns
 
 ### For Developers
-1. Review **[Architecture](Architecture)** to understand the file format
-2. Read **[API Reference](API-Reference)** for complete method documentation
-3. See **[Security](Security)** for cryptographic details
+1. Review **[Architecture](Architecture.md)** to understand the file format
+2. Read **[API Reference](API-Reference.md)** for complete method documentation
+3. See **[Security](Security.md)** for cryptographic details
 
 ### For Integrators
-1. **[Authentication Integration](Authentication-Integration)** - Essential for connecting your auth system
-2. **[Storage Integration](Storage-Integration)** - Essential for any storage backend
-3. **[API Reference](API-Reference)** - Complete integration guide
-4. **[Examples](Examples)** - Integration patterns and use cases
+1. **[Authentication Integration](Authentication-Integration.md)** - Essential for connecting your auth system
+2. **[Storage Integration](Storage-Integration.md)** - Essential for any storage backend
+3. **[API Reference](API-Reference.md)** - Complete integration guide
+4. **[Examples](Examples.md)** - Integration patterns and use cases
 
 ---
 

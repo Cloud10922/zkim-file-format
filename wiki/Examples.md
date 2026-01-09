@@ -339,7 +339,7 @@ await fileService.initialize();
 
 ## Key Management Examples
 
-**⚠️ IMPORTANT:** For complete authentication integration guide, see **[Authentication Integration](Authentication-Integration)** which covers:
+**⚠️ IMPORTANT:** For complete authentication integration guide, see **[Authentication Integration](Authentication-Integration.md)** which covers:
 - Wallet-based authentication
 - OAuth providers (Google, Auth0, etc.)
 - Email/password authentication
@@ -672,11 +672,11 @@ class MonitoredStorageBackend implements IStorageBackend {
 
 ## See Also
 
-- **[Getting Started](Getting-Started)** - Installation and basic setup
-- **[Authentication Integration](Authentication-Integration)** ⭐ - Connect your authentication system
-- **[Storage Integration](Storage-Integration)** - Complete storage backend guide
-- **[API Reference](API-Reference)** - Full API documentation
-- **[Security](Security)** - Security best practices
+- **[Getting Started](Getting-Started.md)** - Installation and basic setup
+- **[Authentication Integration](Authentication-Integration.md)** ⭐ - Connect your authentication system
+- **[Storage Integration](Storage-Integration.md)** - Complete storage backend guide
+- **[API Reference](API-Reference.md)** - Full API documentation
+- **[Security](Security.md)** - Security best practices
 
 ---
 

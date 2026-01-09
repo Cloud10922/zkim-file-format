@@ -1110,9 +1110,9 @@ async function testStorageBackend(backend: IStorageBackend) {
 4. Integrate with `ZKIMFileService`
 
 For more examples and patterns, see:
-- **[Examples](Examples)** - Real-world integration examples
-- **[API Reference](API-Reference)** - Complete API documentation
-- **[Architecture](Architecture)** - File format details
+- **[Examples](Examples.md)** - Real-world integration examples
+- **[API Reference](API-Reference.md)** - Complete API documentation
+- **[Architecture](Architecture.md)** - File format details
 
 ---
 
