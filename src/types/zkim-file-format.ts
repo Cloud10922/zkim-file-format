@@ -9,10 +9,19 @@
 // Types related to the core ZKIM file format specification.
 
 /**
+ * ZKIM Magic Bytes Type
+ * - "ZKIM": Magic bytes identifier using ML-DSA-65 (FIPS 204)
+ */
+export type ZKIMMagicBytes = "ZKIM";
+
+/**
  * ZKIM File Header Interface
  */
 export interface ZkimFileHeader {
-  magic: "ZKIM";
+  /**
+   * Magic bytes: "ZKIM" (using ML-DSA-65, FIPS 204)
+   */
+  magic: ZKIMMagicBytes;
   version: number;
   flags: number;
   platformKeyId: string;
@@ -24,6 +33,9 @@ export interface ZkimFileHeader {
   compressionType: number;
   encryptionType: number;
   hashType: number;
+  /**
+   * Signature type: 1 (ML-DSA-65, 3,309 bytes, FIPS 204)
+   */
   signatureType: number;
 }
 
@@ -77,6 +89,11 @@ export interface ZkimFileMetadata
   customFields?: Record<string, unknown>;
   userId?: string;
   createdAt: number; // Required field
+  /**
+   * ML-KEM-768 public key (1,184 bytes, base64 encoded)
+   * Used for post-quantum key derivation during decryption
+   */
+  kemPublicKey?: string;
   // Inherits: mimeType, tags, accessControl, retentionPolicy
 }
 
@@ -326,7 +343,7 @@ export interface ZkimIntegrityConfig {
   enableAuditLogging: boolean;
   enablePerformanceMetrics: boolean;
   hashAlgorithm: "blake3" | "sha256" | "sha512";
-  signatureAlgorithm: "ed25519" | "ecdsa" | "rsa";
+  signatureAlgorithm: "ml-dsa-65"; // ML-DSA-65 is the standard (FIPS 204)
 }
 
 /**
@@ -408,7 +425,7 @@ export type EncryptionAlgorithm =
   | "aes-256-gcm"
   | "chacha20-poly1305";
 export type HashAlgorithm = "blake3" | "sha256" | "sha512";
-export type SignatureAlgorithm = "ed25519" | "ecdsa" | "rsa";
+export type SignatureAlgorithm = "ml-dsa-65"; // ML-DSA-65 is the standard (FIPS 204)
 
 /**
  * Algorithm Registry Interface

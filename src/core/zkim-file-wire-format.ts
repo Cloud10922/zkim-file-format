@@ -2,7 +2,11 @@
  * ZKIM File Wire Format Utilities
  *
  * Contains all wire format I/O operations for ZKIM files.
- * Wire Format: MAGIC + VERSION + FLAGS + EH_PLATFORM + EH_USER + CHUNKS + MERKLE_ROOT + SIG
+ * Wire Format: MAGIC + VERSION + FLAGS + KEM_CIPHERTEXT(1,088 bytes ML-KEM-768) + EH_PLATFORM + EH_USER + CHUNKS + MERKLE_ROOT + SIG
+ *
+ * Part of ZKIM's Level 3+ security implementation.
+ * Uses NIST-standardized ML-KEM-768 (FIPS 203) and ML-DSA-65 (FIPS 204).
+ * NOT FIPS 140-3 validated by an accredited laboratory.
  *
  * This module exports pure functions (not class methods) for wire format operations.
  */
@@ -10,6 +14,7 @@
 import sodium from "libsodium-wrappers-sumo";
 
 import { blake3 } from "@noble/hashes/blake3.js";
+import { ml_dsa65 } from "@noble/post-quantum/ml-dsa.js";
 
 import { ErrorUtils } from "../utils/error-handling";
 import { ServiceError } from "../types/errors";
@@ -219,8 +224,10 @@ export function calculateMerkleRoot(chunks: ZkimFileChunk[]): Uint8Array {
 }
 
 /**
- * Generate file signature: Ed25519(BLAKE3("zkim/root" || root || manifestHash || algSuiteId || version))
- * Derives 64-byte signing key from 32-byte userKey using BLAKE3
+ * Generate file signature: ML-DSA-65(BLAKE3("zkim/root" || root || manifestHash || algSuiteId || version))
+ * Format uses ML-DSA-65 (FIPS 204)
+ * Derives signing key from userKey using deterministic key generation with context "zkim/ml-dsa-65/file"
+ * Matches infrastructure implementation for consistency
  */
 export async function generateFileSignature(
   merkleRoot: Uint8Array,
@@ -264,8 +271,19 @@ export async function generateFileSignature(
     signatureInput.set(versionBytes, offset);
 
     const hashedInput = blake3(signatureInput, { dkLen: 32 });
-    const signingKey = blake3(userKey, { dkLen: 64 });
-    const signature = sodium.crypto_sign_detached(hashedInput, signingKey);
+
+    // ML-DSA-65 signature (FIPS 204)
+    // Derive signing key from userKey using deterministic key generation
+    // Context: "zkim/ml-dsa-65/file" (matches infrastructure)
+    const seedContext = new TextEncoder().encode("zkim/ml-dsa-65/file");
+    const combinedSeed = new Uint8Array(userKey.length + seedContext.length);
+    combinedSeed.set(userKey);
+    combinedSeed.set(seedContext, userKey.length);
+    const seed = blake3(combinedSeed, { dkLen: 32 });
+
+    const keypair = ml_dsa65.keygen(seed);
+    // Correct parameter order: sign(message, secretKey)
+    const signature = ml_dsa65.sign(hashedInput, keypair.secretKey);
 
     return signature;
   }, context);
@@ -301,10 +319,11 @@ export function calculateManifestHash(ehUser: Uint8Array): Uint8Array {
 
 /**
  * Write ZKIM file in wire format according to spec
- * Wire Format: MAGIC + VERSION + FLAGS + EH_PLATFORM + EH_USER + CHUNKS + MERKLE_ROOT + SIG
+ * Wire Format: MAGIC + VERSION + FLAGS + KEM_CIPHERTEXT + EH_PLATFORM + EH_USER + CHUNKS + MERKLE_ROOT + SIG
  */
 export function writeWireFormat(
   header: ZkimFileHeader,
+  kemCipherText: Uint8Array,
   ehPlatform: Uint8Array,
   ehUser: Uint8Array,
   chunks: ZkimFileChunk[],
@@ -313,6 +332,20 @@ export function writeWireFormat(
   logger: ILogger = defaultLogger
 ): Uint8Array {
   try {
+    // Validate KEM ciphertext size (must be ML-KEM-768)
+    if (kemCipherText.length !== ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE) {
+      throw new ServiceError(
+        `Invalid KEM ciphertext length: expected ${ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE} bytes (ML-KEM-768), got ${kemCipherText.length}`,
+        {
+          code: "INVALID_KEM_CIPHERTEXT_LENGTH",
+          details: {
+            expectedMLKEM768: ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE,
+            actualLength: kemCipherText.length,
+          },
+        }
+      );
+    }
+
     // Validate inputs
     if (ehPlatform.length !== ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE) {
       throw new ServiceError(
@@ -365,14 +398,16 @@ export function writeWireFormat(
 
     // Calculate sizes
     // MAGIC (4) + VERSION (2) + FLAGS (2) = 8 bytes
-    const ehPlatformOffset =
+    const kemCipherTextOffset =
       ZKIM_ENCRYPTION_CONSTANTS.MAGIC_BYTES_SIZE +
       ZKIM_ENCRYPTION_CONSTANTS.VERSION_BYTES_SIZE +
       ZKIM_ENCRYPTION_CONSTANTS.FLAGS_BYTES_SIZE; // 8 bytes
+    const ehPlatformOffset =
+      kemCipherTextOffset + ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE; // 1,096 bytes (after KEM ciphertext)
     const ehUserOffset =
-      ehPlatformOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE; // 48 bytes
+      ehPlatformOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE; // 1,136 bytes (after EH_PLATFORM)
     const chunksOffset =
-      ehUserOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE; // 88 bytes (after EH_PLATFORM + EH_USER)
+      ehUserOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE; // 1,176 bytes (after EH_USER)
 
     // Calculate total chunk size
     let chunksSize = 0;
@@ -411,7 +446,10 @@ export function writeWireFormat(
     wireFormat.set(flagsBytes, offset);
     offset += ZKIM_ENCRYPTION_CONSTANTS.FLAGS_BYTES_SIZE;
 
-    // Write EH_PLATFORM at fixed position 0x08 (40 bytes)
+    // Write KEM_CIPHERTEXT at fixed position 0x08 (1,088 bytes ML-KEM-768)
+    wireFormat.set(kemCipherText, kemCipherTextOffset);
+
+    // Write EH_PLATFORM at fixed position after KEM ciphertext (40 bytes)
     wireFormat.set(ehPlatform, ehPlatformOffset);
 
     // Write EH_USER at fixed position 0x30 (40 bytes)
@@ -499,6 +537,7 @@ export function parseWireFormat(
   magic: string;
   version: number;
   flags: number;
+  kemCipherText: Uint8Array;
   ehPlatform: Uint8Array;
   ehUser: Uint8Array;
   chunks: Array<{
@@ -567,11 +606,30 @@ export function parseWireFormat(
       );
     }
 
-    // Parse EH_PLATFORM at fixed position (EH_HEADER_SIZE bytes)
-    const ehPlatformOffset =
+    // Parse KEM_CIPHERTEXT at fixed position (1,088 bytes ML-KEM-768)
+    const kemCipherTextOffset =
       ZKIM_ENCRYPTION_CONSTANTS.MAGIC_BYTES_SIZE +
       ZKIM_ENCRYPTION_CONSTANTS.VERSION_BYTES_SIZE +
       ZKIM_ENCRYPTION_CONSTANTS.FLAGS_BYTES_SIZE;
+    if (
+      buffer.length <
+      kemCipherTextOffset + ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE
+    ) {
+      throw new ServiceError("File too small for KEM ciphertext", {
+        code: "FILE_TOO_SMALL",
+        details: {
+          bufferLength: buffer.length,
+          requiredSize: kemCipherTextOffset + ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE,
+        },
+      });
+    }
+    const kemCipherText = buffer.slice(
+      kemCipherTextOffset,
+      kemCipherTextOffset + ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE
+    );
+
+    // Parse EH_PLATFORM at fixed position after KEM ciphertext (EH_HEADER_SIZE bytes)
+    const ehPlatformOffset = kemCipherTextOffset + ZKIM_ENCRYPTION_CONSTANTS.ML_KEM_768_CIPHERTEXT_SIZE;
     if (
       buffer.length <
       ehPlatformOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE
@@ -590,7 +648,7 @@ export function parseWireFormat(
       ehPlatformOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE
     );
 
-    // Parse EH_USER at fixed position (EH_HEADER_SIZE bytes)
+    // Parse EH_USER at fixed position after EH_PLATFORM (EH_HEADER_SIZE bytes)
     const ehUserOffset =
       ehPlatformOffset + ZKIM_ENCRYPTION_CONSTANTS.EH_HEADER_SIZE;
     if (
@@ -709,6 +767,7 @@ export function parseWireFormat(
       magic,
       version,
       flags,
+      kemCipherText,
       ehPlatform,
       ehUser,
       chunks,
@@ -730,6 +789,7 @@ export async function convertWireFormatToZkimFile(
     magic: string;
     version: number;
     flags: number;
+    kemCipherText: Uint8Array;
     ehPlatform: Uint8Array;
     ehUser: Uint8Array;
     chunks: Array<{
@@ -743,7 +803,8 @@ export async function convertWireFormatToZkimFile(
   userKey: Uint8Array,
   platformKey: Uint8Array,
   encryptionService: IEncryptionService,
-  logger: ILogger = defaultLogger
+  logger: ILogger = defaultLogger,
+  kemSecretKey?: Uint8Array
 ): Promise<ZkimFile> {
   const context = ErrorUtils.createContext(
     "WireFormat",
@@ -756,6 +817,26 @@ export async function convertWireFormatToZkimFile(
   const result = await ErrorUtils.withErrorHandling(async () => {
     await sodium.ready;
 
+    // Decapsulate shared secret from KEM ciphertext if secret key provided (post-quantum)
+    let derivedPlatformKey = platformKey;
+    let derivedUserKey = userKey;
+    
+    if (kemSecretKey) {
+      // Decapsulate shared secret using ML-KEM-768
+      const { ml_kem768 } = await import("@noble/post-quantum/ml-kem.js");
+      const sharedSecret = ml_kem768.decapsulate(wireFormat.kemCipherText, kemSecretKey);
+      
+      // Derive platform and user keys from ML-KEM-768 shared secret
+      // Platform key includes platformKey parameter for tenant isolation
+      const platformKeySeed = new Uint8Array([...sharedSecret, ...platformKey]);
+      derivedPlatformKey = blake3(platformKeySeed, { dkLen: 32 });
+      const userKeySeed = new Uint8Array([...sharedSecret, ...userKey]);
+      derivedUserKey = blake3(userKeySeed, { dkLen: 32 });
+      
+      // Securely clear shared secret from memory
+      sharedSecret.fill(0);
+    }
+
     // Decrypt EH_USER header to get file metadata
     const ehUserParsed = parseEhHeader(wireFormat.ehUser);
     const userEncrypted = new Uint8Array(
@@ -767,7 +848,7 @@ export async function convertWireFormatToZkimFile(
     // Decrypt user layer to get content key and metadata
     const userDecrypted = await encryptionService.decryptUserLayer(
       userEncrypted,
-      userKey,
+      derivedUserKey,
       ehUserParsed.nonce
     );
 
@@ -786,7 +867,7 @@ export async function convertWireFormatToZkimFile(
     try {
       await encryptionService.decryptPlatformLayer(
         platformEncrypted,
-        platformKey,
+        derivedPlatformKey,
         ehPlatformParsed.nonce
       );
       // Platform layer decrypted successfully (not stored)
@@ -843,7 +924,7 @@ export async function convertWireFormatToZkimFile(
       compressionType: 0, // Will be in metadata
       encryptionType: 1, // XChaCha20-Poly1305
       hashType: 1, // BLAKE3
-      signatureType: 1, // Ed25519
+      signatureType: 1, // ML-DSA-65 (FIPS 204)
     };
 
     // Reconstruct metadata
@@ -861,8 +942,8 @@ export async function convertWireFormatToZkimFile(
         userNonce: sodium.to_base64(ehUserParsed.nonce),
         platformEncrypted: sodium.to_base64(platformEncrypted),
         platformNonce: sodium.to_base64(ehPlatformParsed.nonce),
-        // Store content key for decryption (will be used by decryptZkimFile)
-        contentKey: sodium.to_base64(userDecrypted.contentKey),
+        // Content key is NOT stored in metadata for security
+        // It must be retrieved by decrypting the user layer
       },
       createdAt: Date.now(),
     };
@@ -909,7 +990,8 @@ export async function parseZkimFile(
   userKey: Uint8Array,
   platformKey: Uint8Array,
   encryptionService: IEncryptionService,
-  logger: ILogger = defaultLogger
+  logger: ILogger = defaultLogger,
+  kemSecretKey?: Uint8Array
 ): Promise<ZkimFile> {
   const context = ErrorUtils.createContext("WireFormat", "parseZkimFile", {
     severity: "high",
@@ -952,7 +1034,8 @@ export async function parseZkimFile(
       userKey,
       platformKey,
       encryptionService,
-      logger
+      logger,
+      kemSecretKey
     );
   }, context);
 

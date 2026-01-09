@@ -29,23 +29,14 @@ export class ConstantTimeSecurity {
    * regardless of where the strings differ.
    */
   public static constantTimeStringCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) {
-      // Still perform comparison to maintain constant time
-      const maxLength = Math.max(a.length, b.length);
-      let result = 0;
+    // Perform full comparison regardless of length to maintain constant time
+    const maxLength = Math.max(a.length, b.length);
+    let result = a.length !== b.length ? 1 : 0; // Start with length difference
 
-      for (let i = 0; i < maxLength; i++) {
-        const aChar = i < a.length ? a.charCodeAt(i) : 0;
-        const bChar = i < b.length ? b.charCodeAt(i) : 0;
-        result |= aChar ^ bChar;
-      }
-
-      return false; // Different lengths are never equal
-    }
-
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-      result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    for (let i = 0; i < maxLength; i++) {
+      const aChar = i < a.length ? a.charCodeAt(i) : 0;
+      const bChar = i < b.length ? b.charCodeAt(i) : 0;
+      result |= aChar ^ bChar;
     }
 
     return result === 0;
@@ -57,24 +48,13 @@ export class ConstantTimeSecurity {
    * Prevents timing attacks on binary data comparisons.
    */
   public static constantTimeByteCompare(a: Uint8Array, b: Uint8Array): boolean {
-    if (a.length !== b.length) {
-      // Still perform comparison to maintain constant time
-      const maxLength = Math.max(a.length, b.length);
-      let result = 0;
+    // Perform full comparison regardless of length to maintain constant time
+    const maxLength = Math.max(a.length, b.length);
+    let result = a.length !== b.length ? 1 : 0; // Start with length difference
 
-      for (let i = 0; i < maxLength; i++) {
-        const aByte = i < a.length ? (a[i] ?? 0) : 0;
-        const bByte = i < b.length ? (b[i] ?? 0) : 0;
-        result |= aByte ^ bByte;
-      }
-
-      return false; // Different lengths are never equal
-    }
-
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-      const aByte = a[i] ?? 0;
-      const bByte = b[i] ?? 0;
+    for (let i = 0; i < maxLength; i++) {
+      const aByte = i < a.length ? (a[i] ?? 0) : 0;
+      const bByte = i < b.length ? (b[i] ?? 0) : 0;
       result |= aByte ^ bByte;
     }
 
@@ -143,7 +123,8 @@ export class ConstantTimeSecurity {
     const lengthDiff = actualLength ^ expectedLength;
 
     // Always perform the same operations regardless of length
-    let result = 0;
+    // This loop ensures constant-time execution even for different lengths
+    let accessCount = 0;
     for (let i = 0; i < Math.max(actualLength, expectedLength); i++) {
       const dataByte =
         i < actualLength
@@ -151,8 +132,10 @@ export class ConstantTimeSecurity {
             ? data.charCodeAt(i)
             : (data[i] ?? 0)
           : 0;
-      result |= dataByte; // This will be 0 for padding
+      accessCount += dataByte > 0 ? 1 : 0; // Count non-zero bytes for timing consistency
     }
+    // Use accessCount in a way that doesn't affect the result but prevents optimization
+    void accessCount;
 
     return lengthDiff === 0;
   }
@@ -205,7 +188,15 @@ export class ConstantTimeSecurity {
       }
 
       // Add random delay to prevent timing analysis
-      const randomDelay = Math.random() * (maxTime - minTime) * 0.1;
+      // Use cryptographically secure random for timing attack prevention
+      await sodium.ready;
+      const randomBytes = sodium.randombytes_buf(4);
+      const firstByte = randomBytes[0];
+      if (firstByte === undefined) {
+        throw new Error("Failed to generate random bytes for timing protection");
+      }
+      const randomFactor = (firstByte / 255) * 0.1;
+      const randomDelay = (maxTime - minTime) * randomFactor;
       await this.addSecureDelay(randomDelay);
 
       return result;
@@ -247,15 +238,16 @@ export class ConstantTimeSecurity {
     const isInRange = actual >= minVersion && actual <= maxVersion ? 1 : 0;
     const isExpected = actual === expected ? 1 : 0;
 
-    // Always perform the same operations
-    let result = 0;
+    // Always perform the same loop operations for constant-time execution
+    let matchFound = 0;
     for (let i = minVersion; i <= maxVersion; i++) {
       const isCurrentVersion = i === actual ? 1 : 0;
       const isExpectedVersion = i === expected ? 1 : 0;
-      result |= isCurrentVersion & isExpectedVersion;
+      matchFound |= isCurrentVersion & isExpectedVersion;
     }
 
-    return (isInRange & isExpected) === 1;
+    // Combine all checks: must be in range, expected, and found in loop
+    return (isInRange & isExpected & matchFound) === 1;
   }
 
   /**

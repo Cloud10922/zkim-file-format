@@ -16,7 +16,10 @@ We actively support the following versions with security updates:
 Instead, please report them via one of the following methods:
 
 - **Email:** security@zk.im
+- **Encrypted Email:** Use our [PGP public key](https://zk.im/security/disclosure.asc.pub) for sensitive reports
 - **GitHub Security Advisory:** Use the "Report a vulnerability" button on the repository's Security tab
+
+For additional details, see our official [security.txt](https://zk.im/.well-known/security.txt) and [Security Policy](https://zk.im/security).
 
 ### What to Include
 
@@ -43,7 +46,7 @@ When using `@zkim-platform/file-format`:
 3. **Validate all inputs** - Don't trust user-provided data
 4. **Use secure random generation** - Always use `libsodium-wrappers-sumo` for cryptographic operations
 5. **Keep dependencies updated** - Run `npm audit` regularly
-6. **Follow security guidelines** - See [Security Considerations](../README.md#security-considerations) in README
+6. **Follow security guidelines** - See [Security Documentation](../wiki/Security) for complete details
 
 ### Known Security Considerations
 

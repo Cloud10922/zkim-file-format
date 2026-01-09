@@ -14,7 +14,7 @@ import {
   ZKIMFileService,
   defaultLogger,
   type IStorageBackend,
-} from "../src/index";
+} from "@zkim-platform/file-format";
 import sodium from "libsodium-wrappers-sumo";
 import * as fs from "fs/promises";
 import * as path from "path";
@@ -66,7 +66,31 @@ class NodeFileSystemStorage implements IStorageBackend {
     }
   }
 
-  async list(): Promise<string[]> {
+  async has(key: string): Promise<boolean> {
+    try {
+      const filePath = path.join(this.baseDir, key);
+      await fs.access(filePath);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async clear(): Promise<void> {
+    try {
+      const files = await fs.readdir(this.baseDir, { recursive: true });
+      for (const file of files) {
+        const filePath = path.join(this.baseDir, file);
+        await fs.unlink(filePath);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+
+  async keys(): Promise<string[]> {
     try {
       const files = await fs.readdir(this.baseDir, { recursive: true });
       return files.filter((file) => typeof file === "string");
@@ -83,8 +107,16 @@ async function main() {
   // Wait for libsodium to be ready
   await sodium.ready;
 
-  // Generate encryption keys
+  // ⚠️ SECURITY WARNING: This example uses random keys for simplicity.
+  // In production, ALWAYS derive keys from actual user authentication.
+  // See examples/authentication-integration.ts for proper key derivation.
+  // See wiki/Authentication-Integration.md for complete guide.
+  
+  // Platform key (store securely, same for all users)
   const platformKey = sodium.randombytes_buf(32);
+  
+  // User key (in production, derive from user authentication)
+  // Example: const userKey = await deriveKeyFromPassword(userId, password, salt);
   const userKey = sodium.randombytes_buf(32);
   const userId = "nodejs-user";
 

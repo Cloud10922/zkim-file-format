@@ -35,7 +35,7 @@ A clear and concise description of what actually happened.
 
 ```typescript
 // Minimal code example that reproduces the issue
-import { ZKIMFileService } from "@zkim/file-format";
+import { ZKIMFileService } from "@zkim-platform/file-format";
 
 // Your code here
 ```

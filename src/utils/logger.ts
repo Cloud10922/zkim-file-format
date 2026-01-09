@@ -1,6 +1,9 @@
 /**
  * Logger Interface and Console Implementation
  * Lightweight logging adapter for @zkim-platform/file-format package
+ * 
+ * Note: Console usage is required for this logger implementation in a standalone package.
+ * Users can provide their own ILogger implementation to avoid console usage if needed.
  */
 
 export enum LogLevel {
@@ -36,6 +39,7 @@ export class ConsoleLogger implements ILogger {
     this.logLevel = level;
   }
 
+  /* eslint-disable no-console -- Console logger implementation requires console output */
   public debug(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
       const formatted = this.formatMessage("DEBUG", message, context);
@@ -75,6 +79,7 @@ export class ConsoleLogger implements ILogger {
       }
     }
   }
+  /* eslint-enable no-console */
 
   private shouldLog(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];

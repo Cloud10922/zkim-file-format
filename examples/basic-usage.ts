@@ -11,17 +11,24 @@ import {
   ZKIMFileService,
   InMemoryStorage,
   defaultLogger,
-} from "../src/index";
+} from "@zkim-platform/file-format";
 // libsodium-wrappers-sumo uses default export, not namespace export
-// @ts-expect-error - libsodium-wrappers-sumo has incorrect type definitions
 import sodium from "libsodium-wrappers-sumo";
 
 async function main() {
   // Wait for libsodium to be ready
   await sodium.ready;
 
-  // Generate encryption keys
+  // ⚠️ SECURITY WARNING: This example uses random keys for simplicity.
+  // In production, ALWAYS derive keys from actual user authentication.
+  // See examples/authentication-integration.ts for proper key derivation.
+  // See wiki/Authentication-Integration.md for complete guide.
+  
+  // Platform key (store securely, same for all users)
   const platformKey = sodium.randombytes_buf(32);
+  
+  // User key (in production, derive from user authentication)
+  // Example: const userKey = await deriveKeyFromWallet(walletAddress, signature);
   const userKey = sodium.randombytes_buf(32);
   const userId = "example-user";
 

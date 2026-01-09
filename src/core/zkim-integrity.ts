@@ -1,6 +1,6 @@
 /**
  * ZKIM Integrity Service - File Validation and Tamper Detection
- * Handles integrity validation using BLAKE3 + Ed25519 signatures
+ * Handles integrity validation using BLAKE3 + ML-DSA-65 signatures (FIPS 204)
  *
  * Service Flow:
  * 1. Validate file header integrity
@@ -11,6 +11,9 @@
 
 // libsodium-wrappers-sumo uses default export, not namespace export
 import sodium from "libsodium-wrappers-sumo";
+
+import { blake3 } from "@noble/hashes/blake3.js";
+import { ml_dsa65 } from "@noble/post-quantum/ml-dsa.js";
 
 import {
   addSecureDelay,
@@ -46,7 +49,7 @@ export class ZkimIntegrity extends ServiceBase {
     enableAuditLogging: true,
     enablePerformanceMetrics: true,
     hashAlgorithm: "blake3",
-    signatureAlgorithm: "ed25519",
+    signatureAlgorithm: "ml-dsa-65", // ML-DSA-65 (FIPS 204)
   };
 
   private config: ZkimIntegrityConfig;
@@ -913,10 +916,12 @@ export class ZkimIntegrity extends ServiceBase {
     const result = await ErrorUtils.withErrorHandling(async () => {
       await sodium.ready;
 
-      // Validate signature length (Ed25519 signatures are 64 bytes)
-      if (signature.length !== 64) {
+      // Validate signature length (ML-DSA-65: 3,309 bytes)
+      const ML_DSA_65_SIGNATURE_SIZE = 3309; // ML-DSA-65 signature size (FIPS 204)
+      if (signature.length !== ML_DSA_65_SIGNATURE_SIZE) {
         this.logger.warn("Invalid signature length", {
-          expected: 64,
+          expectedLength: "3309 (ML-DSA-65)",
+          actualLength: signature.length,
           actual: signature.length,
           keyType,
         });
@@ -936,43 +941,30 @@ export class ZkimIntegrity extends ServiceBase {
         return false;
       }
 
-      // Derive signing key from encryption key using BLAKE3 (consistent with signing process)
-      const { blake3 } = await import("@noble/hashes/blake3.js");
-      // Derive a 32-byte seed from the encryption key using BLAKE3
-      const seed = blake3(encryptionKey, { dkLen: 32 });
-      // Generate a proper Ed25519 keypair from the seed
-      const keypair = sodium.crypto_sign_seed_keypair(seed);
-      const signingKey = keypair.privateKey;
+      // Derive ML-DSA-65 signing key from encryption key using BLAKE3
+      // This must match the key derivation used in signing
+      // Matches infrastructure implementation for consistency
+      // Use context string matching infrastructure: "zkim/ml-dsa-65/${keyType}"
+      const seedContext = new TextEncoder().encode(`zkim/ml-dsa-65/${keyType}`);
+      const combinedSeed = new Uint8Array(encryptionKey.length + seedContext.length);
+      combinedSeed.set(encryptionKey);
+      combinedSeed.set(seedContext, encryptionKey.length);
+      const seed = blake3(combinedSeed, { dkLen: 32 });
 
-      // Derive public key from signing key (private key)
-      // For Ed25519, if we have a 64-byte private key, we can extract the public key
-      // libsodium's crypto_sign_ed25519_sk_to_pk extracts public key from private key
-      let publicKey: Uint8Array;
-      try {
-        // Derive public key from 64-byte private key
-        publicKey = sodium.crypto_sign_ed25519_sk_to_pk(signingKey);
-      } catch (error) {
-        this.logger.error("Failed to derive public key from signing key", {
-          error: error instanceof Error ? error.message : String(error),
-          keyType,
-          signingKeyLength: signingKey.length,
-        });
-        return false;
-      }
+      // Generate ML-DSA-65 keypair from seed (deterministic - same as signing)
+      const keypair = ml_dsa65.keygen(seed);
+      const { publicKey } = keypair;
 
       // Encode message to bytes
       const message = new TextEncoder().encode(data);
 
-      // Verify Ed25519 signature using public key
+      // Verify ML-DSA-65 signature using public key (FIPS 204)
+      // Correct parameter order: verify(signature, message, publicKey)
       try {
-        const isValid = sodium.crypto_sign_verify_detached(
-          signature,
-          message,
-          publicKey
-        );
+        const isValid = ml_dsa65.verify(signature, message, publicKey);
 
         if (!isValid) {
-          this.logger.warn("Ed25519 signature verification failed", {
+          this.logger.warn("ML-DSA-65 signature verification failed", {
             keyType,
             signatureLength: signature.length,
             messageLength: message.length,
@@ -982,7 +974,7 @@ export class ZkimIntegrity extends ServiceBase {
 
         return isValid;
       } catch (error) {
-        this.logger.error("Ed25519 signature verification error", {
+        this.logger.error("ML-DSA-65 signature verification error", {
           error: error instanceof Error ? error.message : String(error),
           keyType,
         });

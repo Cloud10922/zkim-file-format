@@ -59,14 +59,19 @@ export async function generateKeyPair(): Promise<{
 }
 
 /**
- * Generate signing key pair using Ed25519
+ * Generate ML-DSA-65 signing key pair (FIPS 204)
+ * Returns public key (1,952 bytes) and secret key (4,032 bytes)
  */
 export async function generateSigningKeyPair(): Promise<{
   publicKey: Uint8Array;
   privateKey: Uint8Array;
 }> {
-  await sodium.ready;
-  return sodium.crypto_sign_keypair();
+  const { ml_dsa65 } = await import("@noble/post-quantum/ml-dsa.js");
+  const { publicKey, secretKey } = ml_dsa65.keygen();
+  return {
+    publicKey,
+    privateKey: secretKey,
+  };
 }
 
 /**

@@ -14,15 +14,22 @@ import {
   InMemoryStorage,
   defaultLogger,
   ServiceError,
-} from "../src/index";
+} from "@zkim-platform/file-format";
 import sodium from "libsodium-wrappers-sumo";
 
 async function main() {
   // Wait for libsodium to be ready
   await sodium.ready;
 
-  // Generate encryption keys
+  // ⚠️ SECURITY WARNING: This example uses random keys for simplicity.
+  // In production, ALWAYS derive keys from actual user authentication.
+  // See examples/authentication-integration.ts for proper key derivation.
+  // See wiki/Authentication-Integration.md for complete guide.
+  
+  // Platform key (store securely, same for all users)
   const platformKey = sodium.randombytes_buf(32);
+  
+  // User key (in production, derive from user authentication)
   const userKey = sodium.randombytes_buf(32);
   const userId = "example-user";
 
@@ -65,6 +72,8 @@ async function main() {
   // Example 1: Handle decryption errors gracefully
   try {
     // Attempt decryption with wrong key
+    // Using wrong key to demonstrate error handling
+    // In production, this would be a key derived from different auth credentials
     const wrongKey = sodium.randombytes_buf(32);
     await fileService.decryptZkimFile(result.file, userId, wrongKey);
   } catch (error) {

@@ -15,6 +15,7 @@ jest.config.cjs
 .npmignore
 *.md
 !README.md
+!CHANGELOG.md
 
 # Build artifacts
 *.tsbuildinfo

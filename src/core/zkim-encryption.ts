@@ -12,6 +12,8 @@
 // libsodium-wrappers-sumo uses default export, not namespace export
 import sodium from "libsodium-wrappers-sumo";
 
+import { blake3 } from "@noble/hashes/blake3.js";
+
 import { ErrorUtils } from "../utils/error-handling";
 import { ServiceBase } from "../utils/singleton-base";
 
@@ -713,13 +715,14 @@ export class ZkimEncryption extends ServiceBase implements IEncryptionService {
         );
       }
 
-      // Derive session key from ephemeral key using hash
+      // Derive session key from ephemeral key using BLAKE3 (ZKIM standard)
       await sodium.ready;
-      const sessionKey = sodium.crypto_generichash(
-        this.config.keySize,
-        ephemeralKey,
-        new TextEncoder().encode(peerId)
-      );
+      const peerIdBytes = new TextEncoder().encode(peerId);
+      const peerIdHash = blake3(peerIdBytes, { dkLen: 32 });
+      const sessionKey = blake3(ephemeralKey, {
+        dkLen: this.config.keySize,
+        key: peerIdHash,
+      });
 
       // Store session key for this peer
       this.sessionKeys.set(peerId, sessionKey);

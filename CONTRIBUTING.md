@@ -82,7 +82,7 @@ npm test
 
 ### Security Requirements
 
-**CRITICAL**: This package prohibits Web Crypto API usage. See [Security Considerations](../README.md#security-considerations) in the README for complete details.
+**CRITICAL**: This package prohibits Web Crypto API usage. See [Security Documentation](../wiki/Security) for complete details.
 
 **Key Requirements:**
 - ✅ Use `libsodium-wrappers-sumo` for all cryptographic operations

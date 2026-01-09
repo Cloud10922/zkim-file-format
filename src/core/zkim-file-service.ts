@@ -13,6 +13,7 @@
 import sodium from "libsodium-wrappers-sumo";
 
 import { blake3 } from "@noble/hashes/blake3.js";
+import { ml_dsa65 } from "@noble/post-quantum/ml-dsa.js";
 
 import { fromBase64 } from "../utils/crypto";
 import { ErrorUtils } from "../utils/error-handling";
@@ -41,6 +42,7 @@ import {
   FILE_PROCESSING_CONSTANTS,
   ZKIM_ENCRYPTION_CONSTANTS,
   ZKIM_FILE_SERVICE_CONSTANTS,
+  ZKIM_POST_QUANTUM_CONSTANTS,
 } from "../constants";
 import { IStorageBackend } from "../types/storage";
 
@@ -114,10 +116,7 @@ export class ZKIMFileService extends ServiceBase {
       // Ensure libsodium is fully initialized before use
       await sodium.ready;
 
-      if (
-        typeof sodium.crypto_generichash !== "function" ||
-        typeof sodium.randombytes_buf !== "function"
-      ) {
+      if (typeof sodium.randombytes_buf !== "function") {
         throw new ServiceError(
           "libsodium functions not available after ready",
           { code: "LIBSODIUM_FUNCTION_UNAVAILABLE" }
@@ -174,28 +173,57 @@ export class ZKIMFileService extends ServiceBase {
       const processedData = await this.processData(dataBuffer);
       const fileMetadata = this.createFileMetadata(metadata, userId);
 
+      // Generate ML-KEM-768 key pair for post-quantum key derivation
+      await sodium.ready;
+      const { ml_kem768 } = await import("@noble/post-quantum/ml-kem.js");
+      const { publicKey: kemPublicKey, secretKey: kemSecretKey } = ml_kem768.keygen();
+
+      // Encapsulate shared secret using own public key (self-encryption for storage)
+      // This enables post-quantum key derivation during decryption
+      const { cipherText: kemCipherText, sharedSecret } = ml_kem768.encapsulate(kemPublicKey);
+
+      // Derive platform and user keys from ML-KEM-768 shared secret
+      // Platform key includes platformKey parameter for tenant isolation
+      const platformKeySeed = new Uint8Array([...sharedSecret, ...platformKey]);
+      const derivedPlatformKey = blake3(platformKeySeed, { dkLen: 32 });
+      const userKeySeed = new Uint8Array([...sharedSecret, ...userKey]);
+      const derivedUserKey = blake3(userKeySeed, { dkLen: 32 });
+      
+      // Securely clear shared secret from memory
+      sharedSecret.fill(0);
+
+      // Store ML-KEM-768 public key in metadata for reference
+      fileMetadata.kemPublicKey = sodium.to_base64(kemPublicKey);
+
+      // Store ML-KEM-768 secret key encrypted with user key for decryption
+      // Skip if skipCasStorage is true (prevents storage dependency)
+      if (!skipCasStorage) {
+        await this.storeKemSecretKey(fileId, userId, kemSecretKey, userKey);
+      }
+
       const encryptionService = await ZkimEncryption.getServiceInstance();
       const encryptionResult = await encryptionService.encryptData(
         processedData.compressedData,
-        platformKey,
-        userKey,
+        derivedPlatformKey,
+        derivedUserKey,
         fileId,
         fileMetadata.customFields
       );
 
       const contentEncryptedData = encryptionResult.contentEncrypted;
       const [platformNonce, userNonce, contentNonce] = encryptionResult.nonces;
-      const { contentKey } = encryptionResult;
 
       fileMetadata.customFields = {
         ...fileMetadata.customFields,
         encryptionType: "3-layer-zkim",
+        kemCipherText: sodium.to_base64(kemCipherText), // Store KEM ciphertext for wire format reconstruction
         platformEncrypted: sodium.to_base64(encryptionResult.platformEncrypted),
         userEncrypted: sodium.to_base64(encryptionResult.userEncrypted),
         platformNonce: platformNonce ? sodium.to_base64(platformNonce) : "",
         userNonce: userNonce ? sodium.to_base64(userNonce) : "",
         contentNonce: contentNonce ? sodium.to_base64(contentNonce) : "",
-        contentKey: contentKey ? sodium.to_base64(contentKey) : "", // Store content key for direct access during decryption
+        // Content key is NOT stored in metadata for security
+        // It must be retrieved by decrypting the user layer
       };
 
       const chunks = await this.mapEncryptedContentToChunks(
@@ -251,8 +279,9 @@ export class ZKIMFileService extends ServiceBase {
       const merkleRoot = calculateMerkleRoot(chunks);
       const manifestHash = calculateManifestHash(ehUser);
 
-      const ALG_SUITE_ID = 0x01; // XChaCha20-Poly1305 + Ed25519 + BLAKE3
-      const algSuiteId = ALG_SUITE_ID;
+      const algSuiteId = ZKIM_ENCRYPTION_CONSTANTS.ALG_SUITE_ID;
+      // generateFileSignature derives signing key from userKey internally
+      // Uses context "zkim/ml-dsa-65/file" for deterministic key generation
       const fileSignature = await generateFileSignature(
         merkleRoot,
         manifestHash,
@@ -271,6 +300,7 @@ export class ZKIMFileService extends ServiceBase {
       } else {
         const wireFormatFile = writeWireFormat(
           header,
+          kemCipherText,
           ehPlatform,
           ehUser,
           chunks,
@@ -433,42 +463,34 @@ export class ZKIMFileService extends ServiceBase {
       if (isThreeLayer) {
         const encryptionService = await ZkimEncryption.getServiceInstance();
 
-        let contentKey: Uint8Array;
-        const contentKeyBase64 = customFields.contentKey as string | undefined;
+        // Content key must be retrieved by decrypting the user layer
+        // It is NOT stored in metadata for security reasons
+        const userEncrypted = customFields.userEncrypted
+          ? sodium.from_base64(customFields.userEncrypted as string)
+          : null;
+        const userNonce = customFields.userNonce
+          ? sodium.from_base64(customFields.userNonce as string)
+          : null;
 
-        if (contentKeyBase64) {
-          contentKey = sodium.from_base64(contentKeyBase64);
-          this.logger.debug("Using stored content key from wire format");
-        } else {
-          const userEncrypted = customFields.userEncrypted
-            ? sodium.from_base64(customFields.userEncrypted as string)
-            : null;
-          const userNonce = customFields.userNonce
-            ? sodium.from_base64(customFields.userNonce as string)
-            : null;
-
-          if (!userEncrypted || !userNonce) {
-            throw new ServiceError(
-              "Missing user layer encrypted data or nonce for 3-layer decryption",
-              {
-                code: "MISSING_DECRYPTION_DATA",
-                details: {
-                  hasUserEncrypted: !!userEncrypted,
-                  hasUserNonce: !!userNonce,
-                },
-              }
-            );
-          }
-
-          const { contentKey: decryptedContentKey } =
-            await encryptionService.decryptUserLayer(
-              userEncrypted,
-              userKey,
-              userNonce
-            );
-          contentKey = decryptedContentKey;
-          this.logger.debug("Decrypted user layer to get content key");
+        if (!userEncrypted || !userNonce) {
+          throw new ServiceError(
+            "Missing user layer encrypted data or nonce for 3-layer decryption",
+            {
+              code: "MISSING_DECRYPTION_DATA",
+              details: {
+                hasUserEncrypted: !!userEncrypted,
+                hasUserNonce: !!userNonce,
+              },
+            }
+          );
         }
+
+        const { contentKey } = await encryptionService.decryptUserLayer(
+          userEncrypted,
+          userKey,
+          userNonce
+        );
+        this.logger.debug("Decrypted user layer to get content key");
 
         const contentNonce = customFields.contentNonce
           ? sodium.from_base64(customFields.contentNonce as string)
@@ -743,7 +765,7 @@ export class ZKIMFileService extends ServiceBase {
             compressionType: 0,
             encryptionType: 1, // XChaCha20-Poly1305
             hashType: 1, // BLAKE3
-            signatureType: 1, // Ed25519
+            signatureType: 1, // ML-DSA-65 (FIPS 204)
           },
           chunks: [
             {
@@ -758,9 +780,9 @@ export class ZKIMFileService extends ServiceBase {
             },
           ],
           metadata: fileMetadata,
-          platformSignature: new Uint8Array(64),
-          userSignature: new Uint8Array(64),
-          contentSignature: new Uint8Array(64),
+          platformSignature: new Uint8Array(ZKIM_ENCRYPTION_CONSTANTS.ML_DSA_65_SIGNATURE_SIZE),
+          userSignature: new Uint8Array(ZKIM_ENCRYPTION_CONSTANTS.ML_DSA_65_SIGNATURE_SIZE),
+          contentSignature: new Uint8Array(ZKIM_ENCRYPTION_CONSTANTS.ML_DSA_65_SIGNATURE_SIZE),
         };
 
         return {
@@ -1001,55 +1023,27 @@ export class ZKIMFileService extends ServiceBase {
   // Private helper methods
 
   /**
-   * Expand Ed25519 seed (32 bytes) to full private key (64 bytes)
-   * Ed25519 requires 64-byte private keys: seed (32) + public key (32)
+   * Derive ML-DSA-65 signing key from encryption key
+   * Uses deterministic key generation with BLAKE3 seed derivation
+   * ML-DSA-65 secret key is 4,032 bytes (FIPS 204)
+   * 
+   * Matches infrastructure implementation for consistency
    */
-  private expandEd25519Key(seed: Uint8Array): Uint8Array {
-    if (seed.length === 64) {
-      // Already 64 bytes, return as-is
-      return seed;
-    }
-    if (seed.length !== 32) {
-      throw new ServiceError(
-        `Invalid Ed25519 seed length: expected 32 bytes, got ${seed.length}`,
-        {
-          code: "INVALID_ED25519_SEED_LENGTH",
-          details: {
-            expectedLength: 32,
-            actualLength: seed.length,
-          },
-        }
-      );
-    }
-
-    // Extract public key from seed using libsodium
-    const { publicKey } = sodium.crypto_sign_seed_keypair(seed);
-    // Expand to 64 bytes: seed (32) + public key (32)
-    const expandedKey = new Uint8Array(64);
-    expandedKey.set(seed, 0); // Seed
-    expandedKey.set(publicKey, 32); // Public key
-
-    this.logger.debug("Ed25519 key expanded from 32 to 64 bytes", {
-      originalLength: 32,
-      expandedLength: expandedKey.length,
-    });
-
-    return expandedKey;
-  }
-
-  /**
-   * Derive a 64-byte Ed25519 signing key from a 32-byte encryption key
-   * Used as fallback when signing keys are not provided in metadata
-   */
-  private deriveSigningKeyFromEncryptionKey(
+  private deriveMLDSA65SigningKeyFromEncryptionKey(
     encryptionKey: Uint8Array
   ): Uint8Array {
-    // Derive a 32-byte seed from the encryption key using BLAKE3
-    const seed = blake3(encryptionKey, { dkLen: 32 });
-    // Generate a proper Ed25519 keypair from the seed
-    const keypair = sodium.crypto_sign_seed_keypair(seed);
-    // Return the 64-byte private key (which includes the public key)
-    return keypair.privateKey;
+    // Derive a 32-byte seed from the encryption key using BLAKE3 with context
+    const seedContext = new TextEncoder().encode("zkim/ml-dsa-65/signing");
+    const combinedSeed = new Uint8Array(encryptionKey.length + seedContext.length);
+    combinedSeed.set(encryptionKey);
+    combinedSeed.set(seedContext, encryptionKey.length);
+    const seed = blake3(combinedSeed, { dkLen: 32 });
+    
+    // Generate ML-DSA-65 keypair from the seed (deterministic)
+    const keypair = ml_dsa65.keygen(seed);
+    
+    // Return a proper copy of the 4,032-byte secret key (ensure it's a contiguous Uint8Array)
+    return new Uint8Array(keypair.secretKey);
   }
 
   /**
@@ -1080,25 +1074,22 @@ export class ZKIMFileService extends ServiceBase {
   }
 
   /**
-   * Validate Ed25519 private key length
+   * Validate ML-DSA-65 signing key length
+   * ML-DSA-65 secret key must be exactly 4,032 bytes (FIPS 204)
    */
-  private validateEd25519KeyLength(
+  private validateMLDSA65KeyLength(
     key: Uint8Array,
     keyType: "platform" | "user",
     base64Length?: number
   ): void {
-    if (
-      key.length !== ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE &&
-      key.length !== 32
-    ) {
-      // Allow 32 bytes (seed) as it will be expanded
+    if (key.length !== ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY) {
       throw new ServiceError(
-        `Invalid ${keyType} signing key length: expected 32 or 64 bytes (Ed25519), got ${key.length}`,
+        `Invalid ${keyType} signing key length: expected ${ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY} bytes (ML-DSA-65), got ${key.length}`,
         {
           code: "INVALID_SIGNING_KEY_LENGTH",
           details: {
             keyType,
-            expectedLength: "32 or 64 bytes",
+            expectedLength: ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY,
             actualLength: key.length,
             base64Length,
           },
@@ -1108,8 +1099,10 @@ export class ZKIMFileService extends ServiceBase {
   }
 
   /**
-   * Get or derive Ed25519 signing key from metadata or encryption key
-   * Handles base64 decoding, key expansion, and fallback derivation
+   * Get or derive ML-DSA-65 signing key from metadata or encryption key
+   * ML-DSA-65 secret key must be 4,032 bytes (FIPS 204)
+   * If not provided in metadata, generates a key pair (non-deterministic)
+   * For production use, signing keys should be provided in metadata
    */
   private async getOrDeriveSigningKey(
     customFields: Record<string, unknown> | undefined,
@@ -1121,51 +1114,26 @@ export class ZKIMFileService extends ServiceBase {
 
     if (base64Key && typeof base64Key === "string") {
       // Decode from base64
-      let decodedKey = await this.decodeBase64SigningKey(base64Key, keyType);
+      const decodedKey = await this.decodeBase64SigningKey(base64Key, keyType);
 
       this.logger.debug(`${keyType} sign key decoded from base64`, {
         base64Length: base64Key.length,
         decodedLength: decodedKey.length,
-        expectedLength: ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE,
+        expectedLength: ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY,
       });
 
-      // Validate length
-      this.validateEd25519KeyLength(decodedKey, keyType, base64Key.length);
-
-      // Expand if needed (32-byte seed to 64-byte private key)
-      if (decodedKey.length === 32) {
-        decodedKey = this.expandEd25519Key(decodedKey);
-        this.logger.debug(`${keyType} sign key expanded from 32 to 64 bytes`, {
-          originalLength: 32,
-          expandedLength: decodedKey.length,
-        });
-      }
-
-      // Final validation - must be 64 bytes after expansion
-      if (
-        decodedKey.length !== ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE
-      ) {
-        throw new ServiceError(
-          `Invalid ${keyType} signing key length: expected ${ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE} bytes (Ed25519), got ${decodedKey.length}`,
-          {
-            code: "INVALID_SIGNING_KEY_LENGTH",
-            details: {
-              keyType,
-              expectedLength:
-                ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE,
-              actualLength: decodedKey.length,
-            },
-          }
-        );
-      }
+      // Validate length - must be exactly 4,032 bytes for ML-DSA-65
+      this.validateMLDSA65KeyLength(decodedKey, keyType, base64Key.length);
 
       return decodedKey;
     } else {
-      // Fallback: derive from encryption key (not ideal, but works)
-      this.logger.debug(
-        `Deriving ${keyType} signing key from encryption key (fallback)`
+      // Fallback: generate ML-DSA-65 key pair from encryption key seed
+      // Note: This generates a new key pair each time (non-deterministic)
+      // For production use, provide signing keys in metadata
+      this.logger.warn(
+        `No ${keyType} signing key provided in metadata. Generating ML-DSA-65 key pair (non-deterministic). For production, provide signing keys in metadata.`
       );
-      return this.deriveSigningKeyFromEncryptionKey(encryptionKey);
+      return this.deriveMLDSA65SigningKeyFromEncryptionKey(encryptionKey);
     }
   }
 
@@ -1173,37 +1141,23 @@ export class ZKIMFileService extends ServiceBase {
     data: Uint8Array,
     userId: string
   ): Promise<string> {
-    await sodium.ready;
-
-    // Diagnostic check for libsodium functions
-    if (typeof sodium.crypto_generichash !== "function") {
-      const availableFunctions = Object.keys(sodium)
-        .filter((k) => k.includes("crypto") || k.includes("random"))
-        .slice(0, 10);
-      throw new ServiceError(
-        `libsodium crypto_generichash not available. Available functions: ${availableFunctions.join(", ")}. ` +
-          `sodium type: ${typeof sodium}, has ready: ${typeof sodium.ready}`,
-        { code: "LIBSODIUM_FUNCTION_UNAVAILABLE" }
-      );
-    }
-
-    const hash = sodium.crypto_generichash(
-      ZKIM_ENCRYPTION_CONSTANTS.KEY_SIZE,
-      data
-    );
-    const userIdHash =
+    // Use BLAKE3 (ZKIM standard hash algorithm) instead of BLAKE2b
+    // BLAKE3 supports variable output lengths and is faster
+    // Matches infrastructure implementation for consistency
+    const hash = blake3(data, { dkLen: ZKIM_ENCRYPTION_CONSTANTS.KEY_SIZE });
+    
+    // Hash userId with standard 32-byte output (not 1952 bytes - that's ML-DSA-65 public key size, not a hash size)
+    const userIdBytes =
       typeof userId === "string"
-        ? sodium.crypto_generichash(
-            ZKIM_ENCRYPTION_CONSTANTS.ED25519_PUBLIC_KEY_SIZE,
-            new TextEncoder().encode(userId)
-          )
-        : sodium.crypto_generichash(
-            ZKIM_ENCRYPTION_CONSTANTS.ED25519_PUBLIC_KEY_SIZE,
-            userId
-          );
+        ? new TextEncoder().encode(userId)
+        : userId;
+    const userIdHash = blake3(userIdBytes, { dkLen: 32 });
+    
     const combined = new Uint8Array(hash.length + userIdHash.length);
     combined.set(hash, 0);
     combined.set(userIdHash, hash.length);
+    
+    await sodium.ready;
     return sodium.to_base64(combined);
   }
 
@@ -1221,8 +1175,8 @@ export class ZKIMFileService extends ServiceBase {
       : 0; // 0 = no compression
 
     return {
-      magic: "ZKIM",
-      version: 1,
+      magic: ZKIM_FILE_SERVICE_CONSTANTS.DEFAULT_MAGIC, // "ZKIM"
+      version: ZKIM_FILE_SERVICE_CONSTANTS.DEFAULT_VERSION, // 1
       flags: 0,
       platformKeyId: "platform-key-placeholder",
       userId,
@@ -1233,7 +1187,7 @@ export class ZKIMFileService extends ServiceBase {
       compressionType,
       encryptionType: 1, // XChaCha20-Poly1305
       hashType: 1, // BLAKE3
-      signatureType: 1, // Ed25519
+      signatureType: 1, // ML-DSA-65 (FIPS 204)
     };
   }
 
@@ -1368,24 +1322,10 @@ export class ZKIMFileService extends ServiceBase {
   }
 
   private async generateIntegrityHash(data: Uint8Array): Promise<Uint8Array> {
-    await sodium.ready;
-    return sodium.crypto_generichash(
-      ZKIM_ENCRYPTION_CONSTANTS.MERKLE_ROOT_SIZE,
-      data
-    );
+    // Use BLAKE3 (ZKIM standard hash algorithm) instead of BLAKE2b
+    return blake3(data, { dkLen: ZKIM_ENCRYPTION_CONSTANTS.MERKLE_ROOT_SIZE });
   }
 
-  private async getUserKey(userId: string): Promise<Uint8Array> {
-    // This should retrieve the user's key from a secure key store
-    // For now, we'll generate a deterministic key based on userId
-    await sodium.ready;
-    const data = `${ZKIM_FILE_SERVICE_CONSTANTS.USER_KEY_PREFIX}${userId}`;
-    const hash = sodium.crypto_generichash(
-      ZKIM_ENCRYPTION_CONSTANTS.KEY_SIZE,
-      data
-    );
-    return hash;
-  }
 
   private generatePadding(dataLength: number): Uint8Array {
     // Generate padding to reach next bucket size
@@ -1497,68 +1437,47 @@ export class ZKIMFileService extends ServiceBase {
     await sodium.ready;
     const message = new TextEncoder().encode(data);
 
-    // Validate key length - must be Ed25519 private key (64 bytes)
-    this.logger.info("signData called", {
-      keyLength: key.length,
-      expectedLength: ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE,
-      messageLength: message.length,
-    });
-
-    if (key.length !== ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE) {
+    // Validate key length - must be ML-DSA-65 secret key (4,032 bytes)
+    if (key.length !== ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY) {
       throw new ServiceError(
-        `Invalid signing key length: expected ${ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE} bytes (Ed25519 private key), got ${key.length}`,
+        `Invalid signing key length: expected ${ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY} bytes (ML-DSA-65), got ${key.length}`,
         {
           code: "INVALID_SIGNING_KEY_LENGTH",
           details: {
-            expectedLength: ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE,
+            expectedLength: ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SECRET_KEY,
             actualLength: key.length,
           },
         }
       );
     }
 
-    // Sign with Ed25519 private key
-    this.logger.info("About to call crypto_sign_detached", {
-      keyLength: key.length,
-      messageLength: message.length,
-      keyType: key.constructor.name,
-      messageType: message.constructor.name,
-    });
-
     try {
-      const signature = sodium.crypto_sign_detached(message, key);
-      this.logger.info("signData succeeded", {
+      // ML-DSA-65 signature (FIPS 204)
+      // Correct parameter order: sign(message, secretKey)
+      const signature = ml_dsa65.sign(message, key);
+      this.logger.info("ZKIM ML-DSA-65 signData succeeded", {
         signatureLength: signature.length,
-        keyLength: key.length,
+        expectedLength: ZKIM_POST_QUANTUM_CONSTANTS.ML_DSA_65_SIGNATURE,
       });
       return signature;
     } catch (error) {
-      // libsodium might throw its own error about invalid key length
-      // libsodium can throw strings, not just Error objects
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error(
-        "libsodium crypto_sign_detached failed",
+        "ZKIM signData failed",
         error instanceof Error ? error : new Error(String(error)),
         {
           keyLength: key.length,
-          expectedLength: ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE,
           errorMessage,
-          errorType:
-            error instanceof Error ? error.constructor.name : typeof error,
-          errorString: String(error),
         }
       );
       throw new ServiceError(
-        `libsodium crypto_sign_detached failed: ${errorMessage}`,
+        `ZKIM signData failed: ${errorMessage}`,
         {
-          code: "LIBSODIUM_SIGN_FAILED",
+          code: "ZKIM_SIGN_FAILED",
           details: {
             keyLength: key.length,
-            expectedLength: ZKIM_ENCRYPTION_CONSTANTS.ED25519_PRIVATE_KEY_SIZE,
             errorMessage,
-            errorType:
-              error instanceof Error ? error.constructor.name : typeof error,
           },
         }
       );
@@ -1654,6 +1573,123 @@ export class ZKIMFileService extends ServiceBase {
   }
 
   /**
+   * Store ML-KEM-768 secret key encrypted with user key
+   */
+  private async storeKemSecretKey(
+    fileId: string,
+    userId: string,
+    kemSecretKey: Uint8Array,
+    userKey: Uint8Array
+  ): Promise<void> {
+    if (!this.storageService) {
+      this.logger.warn("Storage service not available, cannot store ML-KEM-768 secret key", {
+        fileId,
+        userId,
+      });
+      return;
+    }
+
+    await sodium.ready;
+    
+    // Encrypt ML-KEM-768 secret key with user key using XChaCha20-Poly1305
+    const nonce = sodium.randombytes_buf(
+      sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES
+    );
+    const encrypted = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
+      kemSecretKey,
+      null,
+      null,
+      nonce,
+      userKey
+    );
+    
+    // Store encrypted secret key in storage backend
+    // Format: nonce (24 bytes) + encrypted data
+    const encryptedData = new Uint8Array([...nonce, ...encrypted]);
+    
+    // Key format: "zkim-kem-key:{fileId}:{userId}"
+    const storageKey = `zkim-kem-key:${fileId}:${userId}`;
+    await this.storageService.set(storageKey, encryptedData);
+    
+    this.logger.debug("ML-KEM-768 secret key stored", {
+      fileId,
+      userId,
+      keyLength: kemSecretKey.length,
+    });
+  }
+
+  /**
+   * Retrieve and decrypt ML-KEM-768 secret key
+   */
+  private async getKemSecretKey(
+    fileId: string,
+    userId: string,
+    userKey: Uint8Array
+  ): Promise<Uint8Array | null> {
+    if (!this.storageService) {
+      this.logger.debug("Storage service not available, cannot retrieve ML-KEM-768 secret key", {
+        fileId,
+        userId,
+      });
+      return null;
+    }
+
+    try {
+      const storageKey = `zkim-kem-key:${fileId}:${userId}`;
+      const encryptedData = await this.storageService.get(storageKey);
+      
+      if (!encryptedData || encryptedData.length === 0) {
+        this.logger.debug("ML-KEM-768 secret key not found in storage", {
+          fileId,
+          userId,
+        });
+        return null;
+      }
+      
+      // Extract nonce and encrypted data
+      const nonceLength = sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
+      if (encryptedData.length < nonceLength) {
+        throw new ServiceError("Invalid encrypted key format", {
+          code: "INVALID_ENCRYPTED_KEY_FORMAT",
+          details: {
+            fileId,
+            userId,
+            contentLength: encryptedData.length,
+          },
+        });
+      }
+      
+      const nonce = encryptedData.slice(0, nonceLength);
+      const encrypted = encryptedData.slice(nonceLength);
+      
+      // Decrypt ML-KEM-768 secret key
+      await sodium.ready;
+      const kemSecretKey = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+        null,
+        encrypted,
+        null,
+        nonce,
+        userKey
+      );
+      
+      this.logger.debug("ML-KEM-768 secret key retrieved and decrypted", {
+        fileId,
+        userId,
+        keyLength: kemSecretKey.length,
+      });
+      
+      return kemSecretKey;
+    } catch (error) {
+      this.logger.warn("Failed to retrieve ML-KEM-768 secret key", {
+        fileId,
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
    * Cleanup method required by ServiceBase
    */
   public async cleanup(): Promise<void> {
@@ -1664,8 +1700,9 @@ export class ZKIMFileService extends ServiceBase {
     await ErrorUtils.withErrorHandling(async () => {
       this.logger.info("Cleaning up ZKIM File Service");
 
-      // Cleanup all service instances that were initialized
-      // This ensures timers are cleared and resources are freed
+      // Cleanup services that were initialized by this service
+      // Note: SingletonBase.clearInstances() will cleanup ALL services, but we also cleanup
+      // services we directly initialized to ensure proper cleanup order
       try {
         const [encryption, integrity, searchable] = await Promise.allSettled([
           ZkimEncryption.getServiceInstance(),
@@ -1694,10 +1731,14 @@ export class ZKIMFileService extends ServiceBase {
           }));
         }
 
-        await Promise.all(cleanupPromises);
+        // Wait for all cleanups to complete - use allSettled to ensure all run
+        await Promise.allSettled(cleanupPromises);
       } catch (error) {
         this.logger.warn("Error during service cleanup", { error });
       }
+      
+      // CRITICAL: Reset initialized state to allow re-initialization
+      this.initialized = false;
 
       this.logger.info("ZKIM File Service cleanup completed");
     }, context);
@@ -1705,10 +1746,16 @@ export class ZKIMFileService extends ServiceBase {
 
   /**
    * Download a ZKIM file by object ID
+   * 
+   * ⚠️ SECURITY: Requires explicit userKey and platformKey parameters.
+   * Keys must be derived from actual user authentication, not generated deterministically.
+   * See Authentication Integration guide for proper key derivation.
    */
   public async downloadFile(
     objectId: string,
-    userId: string
+    userId: string,
+    platformKey: Uint8Array,
+    userKey: Uint8Array
   ): Promise<{
     success: boolean;
     data?: Uint8Array;
@@ -1725,6 +1772,27 @@ export class ZKIMFileService extends ServiceBase {
 
     const result = await ErrorUtils.withErrorHandling(async () => {
       await sodium.ready;
+
+      // Validate keys
+      if (platformKey.length !== ZKIM_ENCRYPTION_CONSTANTS.KEY_SIZE) {
+        throw new ServiceError(
+          "Platform key must be 32 bytes",
+          {
+            code: "INVALID_PLATFORM_KEY",
+            details: { keyLength: platformKey.length },
+          }
+        );
+      }
+
+      if (userKey.length !== ZKIM_ENCRYPTION_CONSTANTS.KEY_SIZE) {
+        throw new ServiceError(
+          "User key must be 32 bytes",
+          {
+            code: "INVALID_USER_KEY",
+            details: { keyLength: userKey.length },
+          }
+        );
+      }
 
       // Retrieve the ZKIM file from storage
       if (!this.storageService) {
@@ -1748,29 +1816,21 @@ export class ZKIMFileService extends ServiceBase {
         );
       }
 
-      // Get user key and platform key for parsing (wire format needs both)
-      const userKey = await this.getUserKey(userId);
-
-      // For platform key, we need to generate or retrieve it
-      // Platform key should be consistent - use a deterministic key based on userId
-      await sodium.ready;
-      // Generate platform key deterministically (for now - should be stored securely)
-      const platformKeySeed = new TextEncoder().encode(
-        `platform-key-${userId}`
-      );
-      const platformKey = sodium.crypto_generichash(
-        ZKIM_ENCRYPTION_CONSTANTS.KEY_SIZE,
-        platformKeySeed
-      );
+      // Try to retrieve ML-KEM-768 secret key for post-quantum decryption
+      // Use objectId as fileId (they should match)
+      const fileId = objectId;
+      const kemSecretKey = await this.getKemSecretKey(fileId, userId, userKey);
 
       // Parse the ZKIM file (detects format automatically)
+      // Pass kemSecretKey if available for post-quantum decryption
       const encryptionService = await ZkimEncryption.getServiceInstance();
       const zkimFile = await parseZkimFile(
         storedContent,
         userKey,
         platformKey,
         encryptionService,
-        this.logger
+        this.logger,
+        kemSecretKey ?? undefined
       );
 
       // Decrypt and return the content

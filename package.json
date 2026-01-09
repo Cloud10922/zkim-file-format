@@ -1,7 +1,7 @@
 {
   "name": "@zkim-platform/file-format",
-  "version": "1.0.2",
-  "description": "Secure, encrypted file format with three-layer encryption, integrity validation, and privacy-preserving search capabilities",
+  "version": "1.0.0",
+  "description": "Secure, post-quantum encrypted file format with three-layer encryption, ML-KEM-768/ML-DSA-65 cryptography, and privacy-preserving search capabilities",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -40,7 +40,12 @@
     "searchable-encryption",
     "cryptography",
     "libsodium",
-    "zkim"
+    "zkim",
+    "post-quantum",
+    "ml-kem",
+    "ml-dsa",
+    "fips-203",
+    "fips-204"
   ],
   "author": "ZKIM Team",
   "license": "MIT",
@@ -55,6 +60,7 @@
   "dependencies": {
     "@noble/curves": "^2.0.1",
     "@noble/hashes": "^2.0.1",
+    "@noble/post-quantum": "^0.2.1",
     "libsodium-wrappers-sumo": "^0.7.15"
   },
   "devDependencies": {
