@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-01-09
+## [1.1.3] - 2026-01-09
+
+### Changed
+- Updated `libsodium-wrappers-sumo` from `^0.7.15` to `^0.8.0` (major version update)
+  - Based on libsodium 1.0.21
+  - Note: `crypto_pwhash_*()` functions removed from Sumo builds (not used in this package)
+- Updated `@typescript-eslint/parser` from `^8.50.1` to `^8.52.0`
+- Updated `@typescript-eslint/eslint-plugin` from `^8.50.1` to `^8.52.0`
+
+### Technical Details
+- All dependency updates tested and verified
+- CI/CD checks passing with updated dependencies
+- No breaking changes affecting package functionality
+
+---
+
+## [1.1.2] - 2026-01-09
 
 ### Added
 - **Initial Release - v1.0.0:**
@@ -95,6 +111,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ESM and CommonJS dual package support
   - Source maps and declaration files included
   - npm Provenance attestation enabled
+
+## [1.1.2] - 2026-01-09
+
+### Changed
+- Improved README presentation with centered logo and professional layout
+- Replaced verbose technical description with concise value proposition
+
+### Added
+- Added ZKIM logo (`zkim-logo.png`) to package for npm package page branding
+- Centered logo, title, and badges in README for better visual presentation
+
+---
+
+## [1.1.1] - 2026-01-09
+
+### Fixed
+- Fixed internal wiki documentation links to include `.md` extension
+- All wiki links now work correctly when browsing repository on GitHub
+
+---
+
+## [1.1.0] - 2026-01-09
+
+### Added
+- **Initial Public Release:**
+  - Published to npm as `@zkim-platform/file-format`
+  - npm Provenance attestation enabled (SLSA Level 2)
+  - Public repository for build transparency
+
+### Changed
+- Repository made public to enable npm Provenance with OIDC
+- Updated npm authentication to use granular access token
 
 ---
 
