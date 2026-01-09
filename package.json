@@ -1,6 +1,6 @@
 {
   "name": "@zkim-platform/file-format",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Secure, post-quantum encrypted file format with three-layer encryption, ML-KEM-768/ML-DSA-65 cryptography, and privacy-preserving search capabilities",
   "type": "module",
   "main": "./dist/index.cjs",
