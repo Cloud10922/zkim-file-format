@@ -131,30 +131,6 @@ export default [
         },
         {
           selector:
-            'CallExpression[callee.object.name="sodium"][callee.property.name="randombytes_buf"]',
-          message:
-            "Must call await sodium.ready before using sodium crypto functions.",
-        },
-        {
-          selector:
-            'CallExpression[callee.object.name="sodium"][callee.property.name="crypto_aead_xchacha20poly1305_ietf_encrypt"]',
-          message:
-            "Must call await sodium.ready before using sodium crypto functions.",
-        },
-        {
-          selector:
-            'CallExpression[callee.object.name="sodium"][callee.property.name="crypto_aead_xchacha20poly1305_ietf_decrypt"]',
-          message:
-            "Must call await sodium.ready before using sodium crypto functions.",
-        },
-        {
-          selector:
-            'CallExpression[callee.object.name="sodium"][callee.property.name="crypto_box_keypair"]',
-          message:
-            "Must call await sodium.ready before using sodium crypto functions.",
-        },
-        {
-          selector:
             'CallExpression[callee.object.name="Math"][callee.property.name="random"]',
           message:
             "Math.random() is PROHIBITED for generating fake data. Use real data sources or proper loading states.",

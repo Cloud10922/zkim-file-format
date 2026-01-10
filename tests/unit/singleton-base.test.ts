@@ -5,8 +5,6 @@
 
 import { describe, it, expect, beforeEach, afterEach, jest } from "@jest/globals";
 import { SingletonBase, ServiceBase } from "../../src/utils/singleton-base";
-import { ServiceError } from "../../src/types/errors";
-import { defaultLogger } from "../../src/utils/logger";
 
 // Test singleton class
 class TestSingleton extends SingletonBase {
