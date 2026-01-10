@@ -35,7 +35,7 @@ Thank you for your interest in contributing to `@zkim-platform/file-format`! Thi
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 20+ 
 - npm 9+ or higher
 - Git
 

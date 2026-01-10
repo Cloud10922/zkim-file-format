@@ -7,7 +7,7 @@
  * 3. Node.js-specific error handling
  * 4. Integration with Node.js streams (if applicable)
  * 
- * Note: This example requires Node.js 18+ and uses Node.js built-in modules
+ * Note: This example requires Node.js 20+ and uses Node.js built-in modules
  */
 
 import {

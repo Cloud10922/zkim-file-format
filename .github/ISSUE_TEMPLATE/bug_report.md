@@ -27,7 +27,7 @@ A clear and concise description of what actually happened.
 ## 📋 Environment
 
 - **Package Version:** [e.g., 1.0.0]
-- **Node.js Version:** [e.g., 18.17.0]
+- **Node.js Version:** [e.g., 20.x.x]
 - **Operating System:** [e.g., Windows 10, macOS 14, Linux Ubuntu 22.04]
 - **Browser (if applicable):** [e.g., Chrome 120, Firefox 121]
 

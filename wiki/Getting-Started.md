@@ -10,7 +10,7 @@ npm install @zkim-platform/file-format
 
 ### Requirements
 
-- **Node.js:** 18+ (for Node.js environments)
+- **Node.js:** 20+ (for Node.js environments)
 - **Browser:** Modern browser with TypedArray and ES2020+ support
 - **TypeScript:** 5.0+ (recommended for type safety)
 

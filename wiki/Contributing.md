@@ -8,7 +8,7 @@ Contributing guidelines for `@zkim-platform/file-format`.
 
 ### Prerequisites
 
-- **Node.js:** 18+
+- **Node.js:** 20+
 - **npm:** 9+
 - **TypeScript:** 5.0+
 - **Git:** Latest version

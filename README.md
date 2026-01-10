@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/@zkim-platform/file-format"><img src="https://img.shields.io/npm/dm/@zkim-platform/file-format" alt="npm downloads" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript" /></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-green" alt="Node.js" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20%2B-green" alt="Node.js" /></a>
   <img src="https://img.shields.io/badge/coverage-92%25-brightgreen" alt="Test Coverage" />
   <a href="https://github.com/zkdotim/zkim-file-format/actions/workflows/ci.yml"><img src="https://github.com/zkdotim/zkim-file-format/actions/workflows/ci.yml/badge.svg?branch=main" alt="Build Status" /></a>
 </p>
@@ -30,7 +30,7 @@ npm install @zkim-platform/file-format
 
 ### Requirements
 
-- Node.js 18+ (for Node.js environments)
+- Node.js 20+ (for Node.js environments)
 - Modern browser with TypedArray and ES2020+ support (for browser environments)
   - Browser builds rely on WebAssembly-backed libsodium (via `libsodium-wrappers-sumo`)
 - TypeScript 5.0+ (recommended for type safety)

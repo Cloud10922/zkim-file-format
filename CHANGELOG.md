@@ -103,7 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Wire Format**: Includes KEM ciphertext for ML-KEM-768 key exchange
 - **Backward Compatibility**: Maintained for legacy data formats without ML-KEM-768 components
 - **Platform Support:**
-  - Node.js 18+ with ES Modules
+  - Node.js 20+ with ES Modules
   - Modern browsers with TypedArray and WebAssembly support
   - Browser builds rely on WebAssembly-backed libsodium (via `libsodium-wrappers-sumo`)
 - **Build:**
