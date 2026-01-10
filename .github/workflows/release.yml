@@ -40,7 +40,6 @@ jobs:
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-        working-directory: packages/zkim-file-format
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
